@@ -34,8 +34,9 @@ EXAMPLESC =
 EXAMPLESF =
 MANSEC    = IGA
 
-topdir := $(shell cd .. && pwd)
+topdir := $(shell cd ../../ && pwd)
 PETIGA_DIR ?= $(topdir)
+include ${SLEPC_DIR}/lib/slepc/conf/slepc_common # This one first!
 include $(PETIGA_DIR)/lib/petiga/conf/variables
 include $(PETIGA_DIR)/lib/petiga/conf/rules
 
@@ -110,7 +111,7 @@ Elasticity3D: Elasticity3D.o
 	$(CLINKER) -o $@ $< $(PETIGA_LIB)
 	$(RM) -f $<
 HyperElasticity: HyperElasticity.o
-	$(CLINKER) -o $@ $< $(PETIGA_LIB)
+	$(CLINKER) -o $@ $< $(PETIGA_LIB) $(SLEPC_EPS_LIB)
 	$(RM) -f $<
 Richards: Richards.o
 	$(CLINKER) -o $@ $< $(PETIGA_LIB)
