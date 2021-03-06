@@ -980,14 +980,15 @@ int main(int argc, char *argv[])
 
   // Application specific data (defaults to Aluminum)
   AppCtx user;
-  PetscReal E        = 70.0e9;
-  PetscReal nu       = 0.35;
-  PetscBool NeoHook  = PETSC_FALSE;
+  PetscScalar E  = 10;
+  PetscScalar nu = 0.49;
+  PetscBool NeoHook = PETSC_FALSE;
   PetscBool StVenant = PETSC_FALSE;
   PetscBool MooneyR1 = PETSC_FALSE;
   PetscBool MooneyR2 = PETSC_FALSE;
-  PetscInt  nsteps   = 1;
+  PetscInt nsteps = 4;
 
+ 
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","HyperElasticity Options","IGA");CHKERRQ(ierr);
   ierr = PetscOptionsBool("-neohook","Use the NeoHookean constitutive model",__FILE__,NeoHook,&NeoHook,NULL);CHKERRQ(ierr);
   ierr = PetscOptionsBool("-mooneyr1","Use the MooneyRivlin1 constitutive model",__FILE__,MooneyR1,&MooneyR1,NULL);CHKERRQ(ierr);
@@ -1039,7 +1040,7 @@ int main(int argc, char *argv[])
   ierr = IGASetFromOptions(iga);CHKERRQ(ierr);
   ierr = IGASetUp(iga);CHKERRQ(ierr);
 
-  if(iga->geometry == 0 && nsteps > 1){
+  if(iga->geometry == 0 && nsteps > 10){
     SETERRQ(PETSC_COMM_WORLD,
             PETSC_ERR_ARG_OUTOFRANGE,
             "You must specify a geometry to use an updated Lagrangian approach");
@@ -1051,7 +1052,10 @@ int main(int argc, char *argv[])
   ierr = IGASetBoundaryValue(iga,0,0,1,0.0);CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,0,0,2,0.0);CHKERRQ(ierr);
   //   ux = 1 @ x = [1,:,:]
-  ierr = IGASetBoundaryValue(iga,0,1,0,0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+
+  KSP ksp;
+  PC pc;
 
   // Setup the nonlinear solver
   SNES snes;
@@ -1063,20 +1067,38 @@ int main(int argc, char *argv[])
   ierr = IGACreateVec(iga,&U);CHKERRQ(ierr);
   ierr = IGACreateVec(iga,&Utotal);CHKERRQ(ierr);
   ierr = VecZeroEntries(Utotal);CHKERRQ(ierr);
+  ierr = IGAWrite(iga,"geometry0.dat");CHKERRQ(ierr);
+  ierr = IGAWriteVec(iga,Utotal,"disp0.dat");CHKERRQ(ierr);
+  ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
+  ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
+  ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);
+  ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
+   
+
 
   // Load stepping
   PetscInt step;
+ 
   for(step=0;step<nsteps;step++){
 
     PetscPrintf(PETSC_COMM_WORLD,"%d Load Step\n",step);
+    Mat J;
 
     // Solve step
     ierr = VecZeroEntries(U);CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,U);CHKERRQ(ierr);
 
+    SNESGetJacobian(snes, &J, NULL, NULL, NULL);
+     
     // Store total displacement
-    ierr = VecAXPY(Utotal,1.0,U);CHKERRQ(ierr);
-
+     ierr = VecAXPY(Utotal,1.0,U);CHKERRQ(ierr);
+     PetscViewer viewer;
+     PetscViewerASCIIOpen(PETSC_COMM_WORLD, "Amat.m", &viewer);
+     PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
+     MatView(J,viewer);
+     PetscViewerPopFormat(viewer);
+     PetscViewerDestroy(&viewer);
+    
     // Update the geometry
     if(iga->geometry){
       Vec localU;
@@ -1090,9 +1112,13 @@ int main(int argc, char *argv[])
 
     // Dump solution vector
     char filename[256];
-    sprintf(filename,"disp%d.dat",step);
+    sprintf(filename,"disp%d.dat",step+1);
     ierr = IGAWriteVec(iga,Utotal,filename);CHKERRQ(ierr);
 
+    //Write the geometry
+    char filenamegeo[256];
+    sprintf(filenamegeo,"geometry%d.dat",step+1);
+    ierr = IGAWrite(iga,filenamegeo);CHKERRQ(ierr);
   }
 
   ierr = PetscFinalize();CHKERRQ(ierr);
