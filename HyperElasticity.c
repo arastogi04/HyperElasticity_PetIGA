@@ -17,22 +17,15 @@
 
 typedef struct {
   PetscReal lambda,mu,a,b,c,d,c1,c2,kappa;
-  void (*model) (IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx);
+  void (*model) (PetscScalar u[3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx);
 } AppCtx;
 
-static void NeoHookeanModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void NeoHookeanModel(PetscScalar u[3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
   PetscReal lambda = user->lambda;
   PetscReal mu = user->mu;
-
-  // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
-  IGAPointFormValue(pnt,U,&u[0]);
-  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
-
   // F = I + u_{i,j}
   F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
   F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  F[1][2] =   grad_u[1][2];
@@ -119,18 +112,13 @@ static void NeoHookeanModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)
   D[5][4]=D[4][5];
 }
 
-static void StVenantModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void StVenantModel(PetscScalar u[3], PetscScalar grad_u[3][3],PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
   PetscReal lambda = user->lambda;
   PetscReal mu = user->mu;
 
-  // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
-  IGAPointFormValue(pnt,U,&u[0]);
-  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
 
   // F = I + u_{i,j}
   F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
@@ -202,7 +190,7 @@ static void StVenantModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3
   D[5][4]=D[4][5];
 }
 
-static void MooneyRivlinModel1(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void MooneyRivlinModel1(PetscScalar u[3][3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
@@ -211,13 +199,7 @@ static void MooneyRivlinModel1(IGAPoint pnt, const PetscScalar *U, PetscScalar (
   PetscReal c = user->c;
   PetscReal d = user->d;
 
-  // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
-  IGAPointFormValue(pnt,U,&u[0]);
-  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
-
-  // F = I + u_{i,j}
+    // F = I + u_{i,j}
   F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
   F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  F[1][2] =   grad_u[1][2];
   F[2][0] =   grad_u[2][0]; F[2][1] =   grad_u[2][1];  F[2][2] = 1+grad_u[2][2];
@@ -317,7 +299,7 @@ static void MooneyRivlinModel1(IGAPoint pnt, const PetscScalar *U, PetscScalar (
 
 }
 
-static void MooneyRivlinModel2(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void MooneyRivlinModel2(PetscScalar u[3][3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
@@ -325,13 +307,7 @@ static void MooneyRivlinModel2(IGAPoint pnt, const PetscScalar *U, PetscScalar (
   PetscReal c2 = user->c2;
   PetscReal kappa = user->kappa;
 
-  // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
-  IGAPointFormValue(pnt,U,&u[0]);
-  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
-
-  // F = I + u_{i,j}
+    // F = I + u_{i,j}
   F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
   F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  F[1][2] =   grad_u[1][2];
   F[2][0] =   grad_u[2][0]; F[2][1] =   grad_u[2][1];  F[2][2] = 1+grad_u[2][2];
@@ -499,7 +475,7 @@ static void MooneyRivlinModel2(IGAPoint pnt, const PetscScalar *U, PetscScalar (
 
 }
 
-static void GeneralModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void GeneralModel(PetscScalar u[3][3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
@@ -507,13 +483,7 @@ static void GeneralModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3]
   PetscReal c2 = user->c2;
   PetscReal kappa = user->kappa;
 
-  // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
-  IGAPointFormValue(pnt,U,&u[0]);
-  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
-
-  // F = I + u_{i,j}
+    // F = I + u_{i,j}
   F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
   F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  F[1][2] =   grad_u[1][2];
   F[2][0] =   grad_u[2][0]; F[2][1] =   grad_u[2][1];  F[2][2] = 1+grad_u[2][2];
@@ -837,7 +807,15 @@ static PetscErrorCode Residual(IGAPoint pnt,const PetscScalar *U,PetscScalar *Re
 
   // call user model
   PetscScalar F[3][3],S[3][3],D[6][6],B[6][3];
-  user->model(pnt,U,F,S,D,ctx);
+
+  // Interpolate the solution and gradient given U
+  PetscScalar u[3];
+  PetscScalar grad_u[3][3];
+  IGAPointFormValue(pnt,U,&u[0]);
+  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
+
+
+  user->model(u,grad_u,F,S,D,ctx);
 
   // Get basis function gradients
   PetscReal (*N1)[3] = (PetscReal (*)[3]) pnt->shape[1];
@@ -862,7 +840,15 @@ static PetscErrorCode Jacobian(IGAPoint pnt,const PetscScalar *U,PetscScalar *Je
 
   // Call user model
   PetscScalar F[3][3],S[3][3],D[6][6];
-  user->model(pnt,U,F,S,D,ctx);
+  
+  // Interpolate the solution and gradient given U
+  PetscScalar u[3];
+  PetscScalar grad_u[3][3];
+  IGAPointFormValue(pnt,U,&u[0]);
+  IGAPointFormGrad (pnt,U,&grad_u[0][0]);
+
+
+  user->model(u,grad_u,F,S,D,ctx);
 
   // Get basis function gradients
   PetscReal (*N1)[3] = (PetscReal (*)[3]) pnt->shape[1];
