@@ -806,6 +806,7 @@ static void GeneralModel(IGAPoint pnt, const PetscScalar *U, PetscScalar (*F)[3]
 
 }
 
+
 static void DeltaE(PetscScalar Nx, PetscScalar Ny, PetscScalar Nz, PetscScalar (*F)[3], PetscScalar (*B)[3])
 {
   // Given F and basis values, returns B
@@ -1047,8 +1048,6 @@ int main(int argc, char *argv[])
   }
 
   // Set boundary conditions
-  //   u = [0,0,0] @ x = [0,:,:]
-
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,0,1,0,-1/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
@@ -1056,11 +1055,10 @@ int main(int argc, char *argv[])
   ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
   
 
-  KSP ksp;
-  PC pc;
-
   // Setup the nonlinear solver
   SNES snes;
+  KSP ksp;
+  PC pc;
   Vec U,Utotal;
   ierr = IGASetFormFunction(iga,Residual,&user);CHKERRQ(ierr);
   ierr = IGASetFormJacobian(iga,Jacobian,&user);CHKERRQ(ierr);
@@ -1076,7 +1074,7 @@ int main(int argc, char *argv[])
   ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);
   ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
    
-
+    
 
   // Load stepping
   PetscInt step;
@@ -1090,7 +1088,8 @@ int main(int argc, char *argv[])
     ierr = VecZeroEntries(U);CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,U);CHKERRQ(ierr);
 
-    SNESGetJacobian(snes, &J, NULL, NULL, NULL);
+    //Get the Consistent Tangent
+     SNESGetJacobian(snes, &J, NULL, NULL, NULL);
      
     // Store total displacement
      ierr = VecAXPY(Utotal,1.0,U);CHKERRQ(ierr);
@@ -1122,37 +1121,23 @@ int main(int argc, char *argv[])
     sprintf(filenamegeo,"geometry%d.dat",step+1);
     ierr = IGAWrite(iga,filenamegeo);CHKERRQ(ierr);
 
-
-    //Solving Eigenvalue Problem
+    ierr = SlepcInitialize(&argc,&argv,0,0);CHKERRQ(ierr);
     EPS            eps;         /* eigenproblem solver context */
     EPSType        type;
     PetscReal      error,tol,re,im;
     PetscScalar    kr,ki;
     Vec            xr,xi;
     PetscInt       n=30,i,Istart,Iend,nev,maxit,its,nconv;    
-    ierr = SlepcInitialize(&argc,&argv,0,0);CHKERRQ(ierr);
-
     EPSCreate(PETSC_COMM_WORLD,&eps);
 
-   /*
-      Set operators. In this case, it is a standard eigenvalue problem
-   */
-    EPSSetOperators(eps,J,NULL);
-    EPSSetProblemType(eps,EPS_HEP);
 
-   /*
-      Set solver parameters at runtime
-   */
+    EPSSetOperators(eps,J,NULL);
+    EPSSetProblemType(eps,EPS_GHEP);
+
     EPSSetFromOptions(eps);
 
-   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                      Solve the eigensystem
-      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-   EPSSolve(eps);
-   /*
-      Optional: Get some information from the solver and display it
-   */
+    EPSSolve(eps);
     EPSGetIterationNumber(eps,&its);
     PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %D\n",its);
     EPSGetType(eps,&type);
@@ -1162,19 +1147,10 @@ int main(int argc, char *argv[])
     EPSGetTolerances(eps,&tol,&maxit);
     PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%D\n",(double)tol,maxit);
 
-      /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    Display solution and clean up
-     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-  /*
-     Get number of converged approximate eigenpairs
-  */
-  ierr = EPSGetConverged(eps,&nconv);CHKERRQ(ierr);
-  ierr = PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);CHKERRQ(ierr);
+    ierr = EPSGetConverged(eps,&nconv);CHKERRQ(ierr);
+    ierr = PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);CHKERRQ(ierr);
 
   if (nconv>0) {
-    /*
-       Display eigenvalues and relative errors
-    */
     ierr = PetscPrintf(PETSC_COMM_WORLD,
          "           k          ||Ax-kx||/||kx||\n"
          "   ----------------- ------------------\n");CHKERRQ(ierr);
@@ -1210,8 +1186,8 @@ int main(int argc, char *argv[])
      Free work space
   */
     EPSDestroy(&eps);
-    SlepcFinalize();
-  }
+    SlepcFinalize(); 
+      }
 
   ierr = PetscFinalize();CHKERRQ(ierr);
   return 0;
