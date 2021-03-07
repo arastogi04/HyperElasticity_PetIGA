@@ -986,7 +986,7 @@ int main(int argc, char *argv[])
   PetscBool StVenant = PETSC_FALSE;
   PetscBool MooneyR1 = PETSC_FALSE;
   PetscBool MooneyR2 = PETSC_FALSE;
-  PetscInt nsteps = 4;
+  PetscInt nsteps = 1;
 
  
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","HyperElasticity Options","IGA");CHKERRQ(ierr);
@@ -1119,6 +1119,96 @@ int main(int argc, char *argv[])
     char filenamegeo[256];
     sprintf(filenamegeo,"geometry%d.dat",step+1);
     ierr = IGAWrite(iga,filenamegeo);CHKERRQ(ierr);
+
+
+    //Solving Eigenvalue Problem
+    EPS            eps;         /* eigenproblem solver context */
+    EPSType        type;
+    PetscReal      error,tol,re,im;
+    PetscScalar    kr,ki;
+    Vec            xr,xi;
+    PetscInt       n=30,i,Istart,Iend,nev,maxit,its,nconv;    
+    ierr = SlepcInitialize(&argc,&argv,0,0);CHKERRQ(ierr);
+
+    EPSCreate(PETSC_COMM_WORLD,&eps);
+
+   /*
+      Set operators. In this case, it is a standard eigenvalue problem
+   */
+    EPSSetOperators(eps,J,NULL);
+    EPSSetProblemType(eps,EPS_HEP);
+
+   /*
+      Set solver parameters at runtime
+   */
+    EPSSetFromOptions(eps);
+
+   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                      Solve the eigensystem
+      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+    EPSSolve(eps);
+   /*
+      Optional: Get some information from the solver and display it
+   */
+    EPSGetIterationNumber(eps,&its);
+    PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %D\n",its);
+    EPSGetType(eps,&type);
+    PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n\n",type);
+    EPSGetDimensions(eps,&nev,NULL,NULL);
+    PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %D\n",nev);
+    EPSGetTolerances(eps,&tol,&maxit);
+    PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%D\n",(double)tol,maxit);
+
+      /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                    Display solution and clean up
+     - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+  /*
+     Get number of converged approximate eigenpairs
+  */
+  ierr = EPSGetConverged(eps,&nconv);CHKERRQ(ierr);
+  ierr = PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);CHKERRQ(ierr);
+
+  if (nconv>0) {
+    /*
+       Display eigenvalues and relative errors
+    */
+    ierr = PetscPrintf(PETSC_COMM_WORLD,
+         "           k          ||Ax-kx||/||kx||\n"
+         "   ----------------- ------------------\n");CHKERRQ(ierr);
+
+    for (i=0;i<nconv;i++) {
+      /*
+        Get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
+        ki (imaginary part)
+      */
+      ierr = EPSGetEigenpair(eps,i,&kr,&ki,xr,xi);CHKERRQ(ierr);
+      /*
+         Compute the relative error associated to each eigenpair
+      */
+      ierr = EPSComputeError(eps,i,EPS_ERROR_RELATIVE,&error);CHKERRQ(ierr);
+
+#if defined(PETSC_USE_COMPLEX)
+      re = PetscRealPart(kr);
+      im = PetscImaginaryPart(kr);
+#else
+      re = kr;
+      im = ki;
+#endif
+      if (im!=0.0) {
+        ierr = PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error);CHKERRQ(ierr);
+      } else {
+        ierr = PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)re,(double)error);CHKERRQ(ierr);
+      }
+    }
+    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
+  }
+
+  /*
+     Free work space
+  */
+    EPSDestroy(&eps);
+    SlepcFinalize();
   }
 
   ierr = PetscFinalize();CHKERRQ(ierr);
