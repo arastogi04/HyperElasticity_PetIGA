@@ -1048,11 +1048,13 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   //   u = [0,0,0] @ x = [0,:,:]
+
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,0,1,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,0,2,0.0);CHKERRQ(ierr);
-  //   ux = 1 @ x = [1,:,:]
-  ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-30/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,2,0,2,0.0);CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
+  
 
   KSP ksp;
   PC pc;
