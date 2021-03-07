@@ -12,4 +12,4 @@ for infile in glob.glob("disp*.dat"):
                 nrb,
                 fields=sol,
                 #sampler=uniform,
-                vectors={'solution':[0,1,2]})
+                vectors={'solution':[0,1]})

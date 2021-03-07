@@ -1022,8 +1022,8 @@ int main(int argc, char *argv[])
   // Initialize the discretization
   IGA iga;
   ierr = IGACreate(PETSC_COMM_WORLD,&iga);CHKERRQ(ierr);
-  ierr = IGASetDof(iga,3);CHKERRQ(ierr);
-  ierr = IGASetDim(iga,3);CHKERRQ(ierr);
+  ierr = IGASetDof(iga,2);CHKERRQ(ierr);
+  ierr = IGASetDim(iga,2);CHKERRQ(ierr);
   ierr = IGASetFromOptions(iga);CHKERRQ(ierr);
   ierr = IGASetUp(iga);CHKERRQ(ierr);
 
@@ -1035,10 +1035,10 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,1,0,-1/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-0.00001/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,2,0,2,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
+  //ierr = IGASetBoundaryValue(iga,2,0,2,0.0);CHKERRQ(ierr);
+  //ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
   
 
   // Setup the nonlinear solver
