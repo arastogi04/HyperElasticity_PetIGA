@@ -1040,7 +1040,7 @@ int main(int argc, char *argv[])
   ierr = IGASetFromOptions(iga);CHKERRQ(ierr);
   ierr = IGASetUp(iga);CHKERRQ(ierr);
 
-  if(iga->geometry == 0 && nsteps > 10){
+  if(iga->geometry == 0 && nsteps > 50){
     SETERRQ(PETSC_COMM_WORLD,
             PETSC_ERR_ARG_OUTOFRANGE,
             "You must specify a geometry to use an updated Lagrangian approach");
@@ -1050,7 +1050,7 @@ int main(int argc, char *argv[])
   //   u = [0,0,0] @ x = [0,:,:]
 
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,1,0,-30/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-1/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,2,0,2,0.0);CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
@@ -1149,7 +1149,7 @@ int main(int argc, char *argv[])
                       Solve the eigensystem
       - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-    EPSSolve(eps);
+   EPSSolve(eps);
    /*
       Optional: Get some information from the solver and display it
    */
