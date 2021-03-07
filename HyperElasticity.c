@@ -1121,72 +1121,73 @@ int main(int argc, char *argv[])
     sprintf(filenamegeo,"geometry%d.dat",step+1);
     ierr = IGAWrite(iga,filenamegeo);CHKERRQ(ierr);
 
-    ierr = SlepcInitialize(&argc,&argv,0,0);CHKERRQ(ierr);
-    EPS            eps;         /* eigenproblem solver context */
-    EPSType        type;
-    PetscReal      error,tol,re,im;
-    PetscScalar    kr,ki;
-    Vec            xr,xi;
-    PetscInt       n=30,i,Istart,Iend,nev,maxit,its,nconv;    
-    EPSCreate(PETSC_COMM_WORLD,&eps);
+/*
+    ierr = slepcinitialize(&argc,&argv,0,0);chkerrq(ierr);
+    eps            eps;         // eigenproblem solver context 
+    epstype        type;
+    petscreal      error,tol,re,im; 
+    petscscalar    kr,ki;
+    vec            xr,xi;
+    petscint       n=30,i,istart,iend,nev,maxit,its,nconv;    
+    epscreate(petsc_comm_world,&eps);
 
 
-    EPSSetOperators(eps,J,NULL);
-    EPSSetProblemType(eps,EPS_GHEP);
+    epssetoperators(eps,j,null);
+    epssetproblemtype(eps,eps_ghep);
 
-    EPSSetFromOptions(eps);
+    epssetfromoptions(eps);
 
 
-    EPSSolve(eps);
-    EPSGetIterationNumber(eps,&its);
-    PetscPrintf(PETSC_COMM_WORLD," Number of iterations of the method: %D\n",its);
-    EPSGetType(eps,&type);
-    PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n\n",type);
-    EPSGetDimensions(eps,&nev,NULL,NULL);
-    PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenvalues: %D\n",nev);
-    EPSGetTolerances(eps,&tol,&maxit);
-    PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g, maxit=%D\n",(double)tol,maxit);
+    epssolve(eps);
+    epsgetiterationnumber(eps,&its);
+    petscprintf(petsc_comm_world," number of iterations of the method: %d\n",its);
+    epsgettype(eps,&type);
+    petscprintf(petsc_comm_world," solution method: %s\n\n",type);
+    epsgetdimensions(eps,&nev,null,null);
+    petscprintf(petsc_comm_world," number of requested eigenvalues: %d\n",nev);
+    epsgettolerances(eps,&tol,&maxit);
+    petscprintf(petsc_comm_world," stopping condition: tol=%.4g, maxit=%d\n",(double)tol,maxit);
 
-    ierr = EPSGetConverged(eps,&nconv);CHKERRQ(ierr);
-    ierr = PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);CHKERRQ(ierr);
+    ierr = epsgetconverged(eps,&nconv);chkerrq(ierr);
+    ierr = petscprintf(petsc_comm_world," number of converged eigenpairs: %d\n\n",nconv);chkerrq(ierr);
 
   if (nconv>0) {
-    ierr = PetscPrintf(PETSC_COMM_WORLD,
-         "           k          ||Ax-kx||/||kx||\n"
-         "   ----------------- ------------------\n");CHKERRQ(ierr);
+    ierr = petscprintf(petsc_comm_world,
+         "           k          ||ax-kx||/||kx||\n"
+         "   ----------------- ------------------\n");chkerrq(ierr);
 
     for (i=0;i<nconv;i++) {
-      /*
-        Get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
-        ki (imaginary part)
-      */
-      ierr = EPSGetEigenpair(eps,i,&kr,&ki,xr,xi);CHKERRQ(ierr);
-      /*
-         Compute the relative error associated to each eigenpair
-      */
-      ierr = EPSComputeError(eps,i,EPS_ERROR_RELATIVE,&error);CHKERRQ(ierr);
+      
+      //  get converged eigenpairs: i-th eigenvalue is stored in kr (real part) and
+       // ki (imaginary part)
+      
+      ierr = epsgeteigenpair(eps,i,&kr,&ki,xr,xi);chkerrq(ierr);
+      
+      //   compute the relative error associated to each eigenpair
+      
+      ierr = epscomputeerror(eps,i,eps_error_relative,&error);chkerrq(ierr);
 
-#if defined(PETSC_USE_COMPLEX)
-      re = PetscRealPart(kr);
-      im = PetscImaginaryPart(kr);
+#if defined(petsc_use_complex)
+      re = petscrealpart(kr);
+      im = petscimaginarypart(kr);
 #else
       re = kr;
       im = ki;
 #endif
       if (im!=0.0) {
-        ierr = PetscPrintf(PETSC_COMM_WORLD," %9f%+9fi %12g\n",(double)re,(double)im,(double)error);CHKERRQ(ierr);
+        ierr = petscprintf(petsc_comm_world," %9f%+9fi %12g\n",(double)re,(double)im,(double)error);chkerrq(ierr);
       } else {
-        ierr = PetscPrintf(PETSC_COMM_WORLD,"   %12f       %12g\n",(double)re,(double)error);CHKERRQ(ierr);
+        ierr = petscprintf(petsc_comm_world,"   %12f       %12g\n",(double)re,(double)error);chkerrq(ierr);
       }
     }
-    ierr = PetscPrintf(PETSC_COMM_WORLD,"\n");CHKERRQ(ierr);
+    ierr = petscprintf(petsc_comm_world,"\n");chkerrq(ierr);
   }
 
-  /*
-     Free work space
-  */
-    EPSDestroy(&eps);
-    SlepcFinalize(); 
+  
+  //   free work space
+  
+    epsdestroy(&eps);
+    slepcfinalize(); */
       }
 
   ierr = PetscFinalize();CHKERRQ(ierr);
