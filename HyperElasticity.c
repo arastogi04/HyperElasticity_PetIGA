@@ -17,99 +17,61 @@
 
 typedef struct {
   PetscReal lambda,mu,a,b,c,d,c1,c2,kappa;
-  void (*model) (PetscScalar u[3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx);
+  void (*model) (PetscScalar u[2], PetscScalar grad_u[2][2], PetscScalar (*F)[2], PetscScalar (*S)[2], PetscScalar (*D)[3], void *ctx);
 } AppCtx;
 
-static void NeoHookeanModel(PetscScalar u[3], PetscScalar grad_u[3][3], PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
+static void NeoHookeanModel(PetscScalar u[2], PetscScalar grad_u[2][2], PetscScalar (*F)[2], PetscScalar (*S)[2], PetscScalar (*D)[3], void *ctx)
 {
   AppCtx *user = (AppCtx *)ctx;
 
   PetscReal lambda = user->lambda;
   PetscReal mu = user->mu;
   // F = I + u_{i,j}
-  F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  F[0][2] =   grad_u[0][2];
-  F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  F[1][2] =   grad_u[1][2];
-  F[2][0] =   grad_u[2][0]; F[2][1] =   grad_u[2][1];  F[2][2] = 1+grad_u[2][2];
+  F[0][0] = 1+grad_u[0][0]; F[0][1] =   grad_u[0][1];  
+  F[1][0] =   grad_u[1][0]; F[1][1] = 1+grad_u[1][1];  
+  
 
   // Finv
-  PetscScalar Finv[3][3],J,Jinv;
-  J  = F[0][0]*(F[1][1]*F[2][2]-F[1][2]*F[2][1]);
-  J -= F[0][1]*(F[1][0]*F[2][2]-F[1][2]*F[2][0]);
-  J += F[0][2]*(F[1][0]*F[2][1]-F[1][1]*F[2][0]);
+  PetscScalar Finv[2][2],J,Jinv;
+  J  = F[0][0]*F[1][1] - F[1][0]*F[0][1];
   Jinv = 1./J;
-  Finv[0][0] =  (F[1][1]*F[2][2]-F[2][1]*F[1][2])*Jinv;
-  Finv[1][0] = -(F[1][0]*F[2][2]-F[1][2]*F[2][0])*Jinv;
-  Finv[2][0] =  (F[1][0]*F[2][1]-F[2][0]*F[1][1])*Jinv;
-  Finv[0][1] = -(F[0][1]*F[2][2]-F[0][2]*F[2][1])*Jinv;
-  Finv[1][1] =  (F[0][0]*F[2][2]-F[0][2]*F[2][0])*Jinv;
-  Finv[2][1] = -(F[0][0]*F[2][1]-F[2][0]*F[0][1])*Jinv;
-  Finv[0][2] =  (F[0][1]*F[1][2]-F[0][2]*F[1][1])*Jinv;
-  Finv[1][2] = -(F[0][0]*F[1][2]-F[1][0]*F[0][2])*Jinv;
-  Finv[2][2] =  (F[0][0]*F[1][1]-F[1][0]*F[0][1])*Jinv;
+  Finv[0][0] =  (F[1][1])*Jinv;
+  Finv[1][0] = -(F[1][0])*Jinv;
+  Finv[0][1] = -(F[0][1])*Jinv;
+  Finv[1][1] =  (F[0][0])*Jinv;
 
   // C^-1 = (F^T F)^-1 = F^-1 F^-T
   PetscScalar Cinv[3][3];
-  Cinv[0][0] = Finv[0][0]*Finv[0][0] + Finv[0][1]*Finv[0][1] + Finv[0][2]*Finv[0][2];
-  Cinv[0][1] = Finv[0][0]*Finv[1][0] + Finv[0][1]*Finv[1][1] + Finv[0][2]*Finv[1][2];
-  Cinv[0][2] = Finv[0][0]*Finv[2][0] + Finv[0][1]*Finv[2][1] + Finv[0][2]*Finv[2][2];
-  Cinv[1][0] = Finv[1][0]*Finv[0][0] + Finv[1][1]*Finv[0][1] + Finv[1][2]*Finv[0][2];
-  Cinv[1][1] = Finv[1][0]*Finv[1][0] + Finv[1][1]*Finv[1][1] + Finv[1][2]*Finv[1][2];
-  Cinv[1][2] = Finv[1][0]*Finv[2][0] + Finv[1][1]*Finv[2][1] + Finv[1][2]*Finv[2][2];
-  Cinv[2][0] = Finv[2][0]*Finv[0][0] + Finv[2][1]*Finv[0][1] + Finv[2][2]*Finv[0][2];
-  Cinv[2][1] = Finv[2][0]*Finv[1][0] + Finv[2][1]*Finv[1][1] + Finv[2][2]*Finv[1][2];
-  Cinv[2][2] = Finv[2][0]*Finv[2][0] + Finv[2][1]*Finv[2][1] + Finv[2][2]*Finv[2][2];
-
-  // 2nd Piola-Kirchoff stress tensor
+  Cinv[0][0] = Finv[0][0]*Finv[0][0] + Finv[0][1]*Finv[0][1];
+  Cinv[0][1] = Finv[0][0]*Finv[1][0] + Finv[0][1]*Finv[1][1];
+  Cinv[1][0] = Finv[1][0]*Finv[0][0] + Finv[1][1]*Finv[0][1];
+  Cinv[1][1] = Finv[1][0]*Finv[1][0] + Finv[1][1]*Finv[1][1];
+  
+// 2nd Piola-Kirchoff stress tensor
   PetscScalar temp=(0.5*lambda)*(J*J-1.0);
   S[0][0] = temp*Cinv[0][0] + mu*(1.0-Cinv[0][0]);
   S[0][1] = temp*Cinv[0][1] + mu*(-Cinv[0][1]);
-  S[0][2] = temp*Cinv[0][2] + mu*(-Cinv[0][2]);
+  //S[0][2] = temp*Cinv[0][2] + mu*(-Cinv[0][2]);
   S[1][0] = temp*Cinv[1][0] + mu*(-Cinv[1][0]);
   S[1][1] = temp*Cinv[1][1] + mu*(1.0-Cinv[1][1]);
-  S[1][2] = temp*Cinv[1][2] + mu*(-Cinv[1][2]);
-  S[2][0] = temp*Cinv[2][0] + mu*(-Cinv[2][0]);
-  S[2][1] = temp*Cinv[2][1] + mu*(-Cinv[2][1]);
-  S[2][2] = temp*Cinv[2][2] + mu*(1.0-Cinv[2][2]);
+  //S[1][2] = temp*Cinv[1][2] + mu*(-Cinv[1][2]);
+  //S[2][0] = temp*Cinv[2][0] + mu*(-Cinv[2][0]);
+ // S[2][1] = temp*Cinv[2][1] + mu*(-Cinv[2][1]);
+ // S[2][2] = temp*Cinv[2][2] + mu*(1.0-Cinv[2][2]);
 
   // C_abcd=lambda*J^2*Cinv_ab*Cinv_cd+[2*miu-lambda(J^2-1)]*0.5(Cinv_ac*Cinv_bd+Cinv_ad*Cinv_bc)
   PetscScalar temp1=lambda*J*J;
   PetscScalar temp2=2*mu-lambda*(J*J-1);
   D[0][0]=temp1*Cinv[0][0]*Cinv[0][0]+temp2*0.5*(Cinv[0][0]*Cinv[0][0]+Cinv[0][0]*Cinv[0][0]);
   D[0][1]=temp1*Cinv[0][0]*Cinv[1][1]+temp2*0.5*(Cinv[0][1]*Cinv[0][1]+Cinv[0][1]*Cinv[0][1]);
-  D[0][2]=temp1*Cinv[0][0]*Cinv[2][2]+temp2*0.5*(Cinv[0][2]*Cinv[0][2]+Cinv[0][2]*Cinv[0][2]);
-  D[0][3]=temp1*Cinv[0][0]*Cinv[0][1]+temp2*0.5*(Cinv[0][0]*Cinv[0][1]+Cinv[0][1]*Cinv[0][0]);
-  D[0][4]=temp1*Cinv[0][0]*Cinv[1][2]+temp2*0.5*(Cinv[0][1]*Cinv[0][2]+Cinv[0][2]*Cinv[0][1]);
-  D[0][5]=temp1*Cinv[0][0]*Cinv[0][2]+temp2*0.5*(Cinv[0][0]*Cinv[0][2]+Cinv[0][2]*Cinv[0][0]);
+  //D[0][2]=temp1*Cinv[0][0]*Cinv[2][2]+temp2*0.5*(Cinv[0][2]*Cinv[0][2]+Cinv[0][2]*Cinv[0][2]);
+  D[0][2]=temp1*Cinv[0][0]*Cinv[0][1]+temp2*0.5*(Cinv[0][0]*Cinv[0][1]+Cinv[0][1]*Cinv[0][0]);
   D[1][1]=temp1*Cinv[1][1]*Cinv[1][1]+temp2*0.5*(Cinv[1][1]*Cinv[1][1]+Cinv[1][1]*Cinv[1][1]);
-  D[1][2]=temp1*Cinv[1][1]*Cinv[2][2]+temp2*0.5*(Cinv[1][2]*Cinv[1][2]+Cinv[1][2]*Cinv[1][2]);
-  D[1][3]=temp1*Cinv[1][1]*Cinv[0][1]+temp2*0.5*(Cinv[1][0]*Cinv[1][1]+Cinv[1][1]*Cinv[1][0]);
-  D[1][4]=temp1*Cinv[1][1]*Cinv[1][2]+temp2*0.5*(Cinv[1][1]*Cinv[1][2]+Cinv[1][2]*Cinv[1][1]);
-  D[1][5]=temp1*Cinv[1][1]*Cinv[0][2]+temp2*0.5*(Cinv[1][0]*Cinv[1][2]+Cinv[1][2]*Cinv[1][0]);
-  D[2][2]=temp1*Cinv[2][2]*Cinv[2][2]+temp2*0.5*(Cinv[2][2]*Cinv[2][2]+Cinv[2][2]*Cinv[2][2]);
-  D[2][3]=temp1*Cinv[2][2]*Cinv[0][1]+temp2*0.5*(Cinv[2][0]*Cinv[2][1]+Cinv[2][1]*Cinv[2][0]);
-  D[2][4]=temp1*Cinv[2][2]*Cinv[1][2]+temp2*0.5*(Cinv[2][1]*Cinv[2][2]+Cinv[2][2]*Cinv[2][1]);
-  D[2][5]=temp1*Cinv[2][2]*Cinv[0][2]+temp2*0.5*(Cinv[2][0]*Cinv[2][2]+Cinv[2][2]*Cinv[2][0]);
-  D[3][3]=temp1*Cinv[0][1]*Cinv[0][1]+temp2*0.5*(Cinv[0][0]*Cinv[1][1]+Cinv[0][1]*Cinv[1][0]);
-  D[3][4]=temp1*Cinv[0][1]*Cinv[1][2]+temp2*0.5*(Cinv[0][1]*Cinv[1][2]+Cinv[0][2]*Cinv[1][1]);
-  D[3][5]=temp1*Cinv[0][1]*Cinv[0][2]+temp2*0.5*(Cinv[0][0]*Cinv[1][2]+Cinv[0][2]*Cinv[1][0]);
-  D[4][4]=temp1*Cinv[1][2]*Cinv[1][2]+temp2*0.5*(Cinv[1][1]*Cinv[2][2]+Cinv[1][2]*Cinv[2][1]);
-  D[4][5]=temp1*Cinv[1][2]*Cinv[0][2]+temp2*0.5*(Cinv[1][0]*Cinv[2][2]+Cinv[1][2]*Cinv[2][0]);
-  D[5][5]=temp1*Cinv[0][2]*Cinv[0][2]+temp2*0.5*(Cinv[0][0]*Cinv[2][2]+Cinv[0][2]*Cinv[2][0]);
+  D[1][2]=temp1*Cinv[1][1]*Cinv[0][1]+temp2*0.5*(Cinv[1][0]*Cinv[1][1]+Cinv[1][1]*Cinv[1][0]);
+  D[2][2]=temp1*Cinv[0][1]*Cinv[0][1]+temp2*0.5*(Cinv[0][0]*Cinv[1][1]+Cinv[0][1]*Cinv[1][0]);
   D[1][0]=D[0][1];
   D[2][0]=D[0][2];
-  D[3][0]=D[0][3];
-  D[4][0]=D[0][4];
-  D[5][0]=D[0][5];
   D[2][1]=D[1][2];
-  D[3][1]=D[1][3];
-  D[4][1]=D[1][4];
-  D[5][1]=D[1][5];
-  D[3][2]=D[2][3];
-  D[4][2]=D[2][4];
-  D[5][2]=D[2][5];
-  D[4][3]=D[3][4];
-  D[5][3]=D[3][5];
-  D[5][4]=D[4][5];
 }
 
 static void StVenantModel(PetscScalar u[3], PetscScalar grad_u[3][3],PetscScalar (*F)[3], PetscScalar (*S)[3], PetscScalar (*D)[6], void *ctx)
@@ -782,16 +744,18 @@ static void DeltaE(PetscScalar Nx, PetscScalar Ny, PetscScalar (*F)[3], PetscSca
   // Given F and basis values, returns B
   B[0][0] = F[0][0]*Nx;
   B[0][1] = F[1][0]*Nx;
-  B[0][2] = F[2][0]*Nx;
+  //B[0][2] = F[2][0]*Nx;
   B[1][0] = F[0][1]*Ny;
   B[1][1] = F[1][1]*Ny;
-  B[1][2] = F[2][1]*Ny;
-  //B[2][0] = F[0][2]*Nz;
-  //B[2][1] = F[1][2]*Nz;
+  //B[1][2] = F[2][1]*Ny;
+  B[2][0] = F[0][0]*Ny+F[0][1]*Nx;
+
+  B[2][1] = F[1][0]*Ny+F[1][1]*Nx;
+
   //B[2][2] = F[2][2]*Nz;
-  B[3][0] = F[0][0]*Ny+F[0][1]*Nx;
-  B[3][1] = F[1][0]*Ny+F[1][1]*Nx;
-  B[3][2] = F[2][0]*Ny+F[2][1]*Nx;
+  //B[3][0] = F[0][0]*Ny+F[0][1]*Nx;
+  //B[3][1] = F[1][0]*Ny+F[1][1]*Nx;
+ // B[3][2] = F[2][0]*Ny+F[2][1]*Nx;
  // B[4][0] = F[0][1]*Nz+F[0][2]*Ny;
  // B[4][1] = F[1][1]*Nz+F[1][2]*Ny;
  // B[4][2] = F[2][1]*Nz+F[2][2]*Ny;
@@ -806,11 +770,11 @@ static PetscErrorCode Residual(IGAPoint pnt,const PetscScalar *U,PetscScalar *Re
   AppCtx *user = (AppCtx *)ctx;
 
   // call user model
-  PetscScalar F[3][3],S[3][3],D[6][6],B[3][2];
+  PetscScalar F[2][2],S[2][2],D[3][3],B[3][2];
 
   // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
+  PetscScalar u[2];
+  PetscScalar grad_u[2][2];
   IGAPointFormValue(pnt,U,&u[0]);
   IGAPointFormGrad (pnt,U,&grad_u[0][0]);
 
@@ -839,11 +803,11 @@ static PetscErrorCode Jacobian(IGAPoint pnt,const PetscScalar *U,PetscScalar *Je
   AppCtx *user = (AppCtx *)ctx;
 
   // Call user model
-  PetscScalar F[3][3],S[3][3],D[6][6];
+  PetscScalar F[2][2],S[2][2],D[3][3];
   
   // Interpolate the solution and gradient given U
-  PetscScalar u[3];
-  PetscScalar grad_u[3][3];
+  PetscScalar u[2];
+  PetscScalar grad_u[2][2];
   IGAPointFormValue(pnt,U,&u[0]);
   IGAPointFormGrad (pnt,U,&grad_u[0][0]);
 
@@ -955,7 +919,7 @@ int main(int argc, char *argv[])
   // Application specific data (defaults to Aluminum)
   AppCtx user;
   PetscScalar E  = 10;
-  PetscScalar nu = 0.0;
+  PetscScalar nu = 0.3;
   PetscBool NeoHook = PETSC_FALSE;
   PetscBool StVenant = PETSC_FALSE;
   PetscBool MooneyR1 = PETSC_FALSE;
@@ -1022,7 +986,7 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,1,0,-0.00001/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
   //ierr = IGASetBoundaryValue(iga,2,0,2,0.0);CHKERRQ(ierr);
   //ierr = IGASetBoundaryValue(iga,2,1,2,0.0);CHKERRQ(ierr);
