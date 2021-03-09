@@ -30,7 +30,7 @@ static void NeoHookeanModel(PetscScalar u[2], PetscScalar grad_u[2][2], PetscSca
   Finv[1][1] =  (F[0][0])*Jinv;
 
   // C^-1 = (F^T F)^-1 = F^-1 F^-T //Checked
-  PetscScalar Cinv[3][3];
+  PetscScalar Cinv[2][2];
   Cinv[0][0] = Finv[0][0]*Finv[0][0] + Finv[0][1]*Finv[0][1];
   Cinv[0][1] = Finv[0][0]*Finv[1][0] + Finv[0][1]*Finv[1][1];
   Cinv[1][0] = Finv[1][0]*Finv[0][0] + Finv[1][1]*Finv[0][1];
@@ -183,8 +183,8 @@ int main(int argc, char *argv[])
   // Application specific data (defaults to Aluminum)
   AppCtx user;
   PetscScalar E  = 10;
-  PetscScalar nu = 0.1;
-  PetscInt nsteps = 10;
+  PetscScalar nu = 0.49;
+  PetscInt nsteps = 50;
 
  
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","HyperElasticity Options","IGA");CHKERRQ(ierr);
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+  ierr = IGASetBoundaryValue(iga,0,1,0,-0.3/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
   
 
