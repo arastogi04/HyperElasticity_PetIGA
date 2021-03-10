@@ -110,7 +110,6 @@ static PetscErrorCode Jacobian(IGAPoint pnt,const PetscScalar *U,PetscScalar *Je
   // Call user model
   PetscScalar F[2][2],S[2][2],D[3][3];
   
-    // Get basis function gradients - shape[1] means 1st derivative
   PetscScalar u[2];
   PetscScalar grad_u[2][2];
   IGAPointFormValue(pnt,U,&u[0]);
@@ -119,7 +118,7 @@ static PetscErrorCode Jacobian(IGAPoint pnt,const PetscScalar *U,PetscScalar *Je
 
   user->model(u,grad_u,F,S,D,ctx);
 
-  // Get basis function gradients
+  // Get basis function gradients - shape[1] means 1st derivative
   PetscReal (*N1)[2] = (PetscReal (*)[2]) pnt->shape[1];
 
   // Put together the jacobian
@@ -180,11 +179,10 @@ int main(int argc, char *argv[])
   PetscErrorCode ierr;
   ierr = PetscInitialize(&argc,&argv,0,0);CHKERRQ(ierr);
 
-  // Application specific data (defaults to Aluminum)
   AppCtx user;
   PetscScalar E  = 10;
   PetscScalar nu = 0.49;
-  PetscInt nsteps = 50;
+  PetscInt nsteps = 10;
 
  
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","HyperElasticity Options","IGA");CHKERRQ(ierr);
@@ -212,9 +210,10 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,0,1,0,-0.3/((PetscReal)nsteps));CHKERRQ(ierr);
+  //ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
-  
+  ierr = IGASetBoundaryValue(iga,1,1,1,0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+
 
   // Setup the nonlinear solver
   SNES snes;
@@ -230,30 +229,32 @@ int main(int argc, char *argv[])
   ierr = VecZeroEntries(Utotal);CHKERRQ(ierr);
   ierr = IGAWrite(iga,"geometry0.dat");CHKERRQ(ierr);
   ierr = IGAWriteVec(iga,Utotal,"disp0.dat");CHKERRQ(ierr);
+
+// Get KSP and set the Linear Solver to LU or Cholesky
   ierr = SNESGetKSP(snes, &ksp);CHKERRQ(ierr);
   ierr = KSPGetPC(ksp,&pc);CHKERRQ(ierr);
   ierr = PCFactorSetMatSolverType(pc,MATSOLVERMUMPS);
   ierr = PCSetType(pc,PCLU);CHKERRQ(ierr);
-   
-    
-
-  // Load stepping
+  
+// Load stepping
   PetscInt step;
  
   for(step=0;step<nsteps;step++){
-
+ 
     PetscPrintf(PETSC_COMM_WORLD,"%d Load Step\n",step);
     Mat J;
-
+    
     // Solve step
     ierr = VecZeroEntries(U);CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,U);CHKERRQ(ierr);
-
+    
     //Get the Consistent Tangent
      SNESGetJacobian(snes, &J, NULL, NULL, NULL);
      
-    // Store total displacement
+     // Store total displacement
      ierr = VecAXPY(Utotal,1.0,U);CHKERRQ(ierr);
+    
+     //Print out the consistent Tangent
      PetscViewer viewer;
      PetscViewerASCIIOpen(PETSC_COMM_WORLD, "Amat.m", &viewer);
      PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_MATLAB);
