@@ -40,7 +40,8 @@ static void NeoHookeanModel(PetscScalar u[2], PetscScalar grad_u[2][2], PetscSca
   PetscScalar temp=(0.5*lambda)*(J*J-1.0);
   S[0][0] = temp*Cinv[0][0] + mu*(1.0-Cinv[0][0]);
   S[0][1] = temp*Cinv[0][1] + mu*(-Cinv[0][1]);
-  S[1][0] = temp*Cinv[1][0] + mu*(-Cinv[1][0]);
+  S[1][0] = S[0][1];
+ // S[1][0] = temp*Cinv[1][0] + mu*(-Cinv[1][0]);
   S[1][1] = temp*Cinv[1][1] + mu*(1.0-Cinv[1][1]);
 
   // C_abcd=lambda*J^2*Cinv_ab*Cinv_cd+[2*miu-lambda(J^2-1)]*0.5(Cinv_ac*Cinv_bd+Cinv_ad*Cinv_bc) //Checked
@@ -97,8 +98,8 @@ static PetscErrorCode Residual(IGAPoint pnt,const PetscScalar *U,PetscScalar *Re
     PetscReal Na_x  = N1[a][0];
     PetscReal Na_y  = N1[a][1];
     DeltaE(Na_x,Na_y,F,B);
-    R[a][0] = B[0][0]*S[0][0]+B[1][0]*S[1][1]; //Checked
-    R[a][1] = B[0][1]*S[0][0]+B[1][1]*S[1][1]; //Checked
+    R[a][0] = B[0][0]*S[0][0]+B[1][0]*S[1][1] + B[2][0]*S[0][1]; 
+    R[a][1] = B[0][1]*S[0][0]+B[1][1]*S[1][1] + B[2][1]*S[0][1];
   }
   return 0;
 }
@@ -181,8 +182,8 @@ int main(int argc, char *argv[])
 
   AppCtx user;
   PetscScalar E  = 10;
-  PetscScalar nu = 0.49;
-  PetscInt nsteps = 10;
+  PetscScalar nu = 0.3;
+  PetscInt nsteps = 50;
 
  
   ierr = PetscOptionsBegin(PETSC_COMM_WORLD,"","HyperElasticity Options","IGA");CHKERRQ(ierr);
@@ -210,9 +211,11 @@ int main(int argc, char *argv[])
 
   // Set boundary conditions
   ierr = IGASetBoundaryValue(iga,0,0,0,0.0);CHKERRQ(ierr);
-  //ierr = IGASetBoundaryValue(iga,0,1,0,-0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+  //ierr = IGASetBoundaryValue(iga,0,0,1,0.0);CHKERRQ(ierr);
+
+  ierr = IGASetBoundaryValue(iga,0,1,0,-10/((PetscReal)nsteps));CHKERRQ(ierr);
   ierr = IGASetBoundaryValue(iga,1,0,1,0.0);CHKERRQ(ierr);
-  ierr = IGASetBoundaryValue(iga,1,1,1,0.1/((PetscReal)nsteps));CHKERRQ(ierr);
+  //ierr = IGASetBoundaryValue(iga,1,1,1,0.1/((PetscReal)nsteps));CHKERRQ(ierr);
 
 
   // Setup the nonlinear solver
@@ -245,7 +248,7 @@ int main(int argc, char *argv[])
     Mat J;
     
     // Solve step
-    ierr = VecZeroEntries(U);CHKERRQ(ierr);
+   // ierr = VecZeroEntries(U);CHKERRQ(ierr);
     ierr = SNESSolve(snes,NULL,U);CHKERRQ(ierr);
     
     //Get the Consistent Tangent
